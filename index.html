@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blue-IoT</title>
+    <!-- Add Chart.js and Leaflet.js libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #F0F0F0;
+            /* Background color */
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background-color: #007BFF;
+            /* Navbar background color */
+            padding: 10px 0;
+        }
+
+        header h1 {
+            color: #FFF;
+            /* Navbar text color */
+            text-align: center;
+            margin: 0;
+        }
+
+        #content {
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        p {
+            font-size: 18px;
+            line-height: 1.5;
+        }
+
+        /* Loading skeleton styles */
+        #loading-skeleton {
+            display: none;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            padding: 20px;
+            border-radius: 5px;
+            text-align: center;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 9999;
+            width: 300px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .loading-header,
+        .loading-content {
+            height: 20px;
+            width: 100%;
+            background-color: #ccc;
+            margin-bottom: 10px;
+        }
+
+        .loading-header {
+            animation: loading-animation 1.5s infinite;
+        }
+
+        .loading-content {
+            animation: loading-animation 1.5s infinite reverse;
+        }
+
+        @keyframes loading-animation {
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(100%);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Blue-IoT</h1>
+    </header>
+    <div id="content" class="container">
+        <h2>Welcome to Blue-IoT</h2>
+        <p>This website allows you to visualize water quality data collected from IoT sensors. You can upload a JSON
+            file containing sensor data, and the website will create interactive charts to help you analyze and
+            understand the water quality measurements.</p>
+        <p>Please select a JSON file using the button below to get started:</p>
+        <input type="file" id="jsonFileInput" accept=".json">
+        <!-- Map container -->
+        <div id="map" style="width: 100%; height: 400px;"></div>
+        <div id="charts"></div>
+    </div>
+
+    <!-- Loading skeleton HTML -->
+    <div id="loading-skeleton">
+        <div class="loading-header"></div>
+        <div class="loading-content"></div>
+    </div>
+    <footer>
+        <div class="container">
+            <p>&copy; 2023 Klaas D'haenekint | Guided by Prof. dr. ir. Paul Devos</p>
+        </div>
+    </footer>
+
+    <script>
+        // Function to show the loading skeleton
+        function showLoadingSkeleton() {
+            const loadingSkeleton = document.getElementById('loading-skeleton');
+            loadingSkeleton.style.display = 'block';
+            const charts = document.getElementById('charts');
+            charts.style.display = 'none';
+        }
+
+        // Function to hide the loading skeleton
+        function hideLoadingSkeleton() {
+            const loadingSkeleton = document.getElementById('loading-skeleton');
+            loadingSkeleton.style.display = 'none';
+            const charts = document.getElementById('charts');
+            charts.style.display = 'block';
+        }
+
+        // Function to read and process JSON data asynchronously
+        document.getElementById('jsonFileInput').addEventListener('change', async function (event) {
+            const file = event.target.files[0];
+            if (file) {
+                try {
+                    showLoadingSkeleton(); // Show loading skeleton while processing data
+
+                    const json = await readFileAsync(file); // Read the file asynchronously
+
+                    processData(json);
+                } catch (error) {
+                    console.error('Error processing JSON data:', error);
+                    hideLoadingSkeleton(); // Hide loading skeleton in case of an error
+                }
+            }
+        });
+
+        // Function to read a file asynchronously and return a Promise
+        function readFileAsync(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+
+                reader.onload = function (e) {
+                    const json = e.target.result;
+                    resolve(json);
+                };
+
+                reader.onerror = function (error) {
+                    reject(error);
+                };
+
+                reader.readAsText(file);
+            });
+        }
+
+        // Initialize the map
+        var map = L.map('map').setView([51.0129, 3.7080], 10); // Set initial view and zoom level
+
+        // Function to process and visualize JSON data
+        function processData(json) {
+            try {
+                showLoadingSkeleton(); // Show loading skeleton while processing data
+
+                const dataLines = json.split('\n').filter(Boolean); // Split by line and remove empty lines
+                const validData = [];
+                const labels = [];
+
+                dataLines.forEach(line => {
+                    try {
+                        const item = JSON.parse(line);
+                        if (item && item.time) {
+                            validData.push(item);
+                            labels.push(item.time);
+                        }
+                    } catch (error) {
+                        // Discard invalid JSON lines
+                    }
+                });
+
+                // Create a container for charts
+                const chartsContainer = document.getElementById('charts');
+                chartsContainer.innerHTML = '';
+
+                // Create a combined chart
+                const combinedChartCanvas = document.createElement('canvas');
+                combinedChartCanvas.width = 800;
+                combinedChartCanvas.height = 400;
+                chartsContainer.appendChild(combinedChartCanvas);
+
+                const combinedChartData = {};
+                validData.forEach(item => {
+                    for (const key in item) {
+                        if (key !== 'time' && key !== 'date' && key !== 'location') { // Exclude 'date' field
+                            if (!combinedChartData[key]) {
+                                combinedChartData[key] = { labels: labels, data: [] };
+                            }
+                            combinedChartData[key].data.push(item[key].value);
+                        }
+                    }
+                });
+
+                const combinedChartConfig = {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: []
+                    },
+                    options: {
+                        scales: {
+                            x: { display: true, title: { display: true, text: 'Time' } },
+                            y: { display: true, title: { display: true, text: 'Value' }, type: 'logarithmic' }
+                        }
+                    }
+                };
+
+                for (const key in combinedChartData) {
+                    if (combinedChartData[key].data.length >= 5) {
+                        combinedChartConfig.data.datasets.push({
+                            label: key,
+                            data: combinedChartData[key].data,
+                            borderColor: getRandomColor(),
+                            borderWidth: 2,
+                            fill: false
+                        });
+                    }
+                }
+
+                new Chart(combinedChartCanvas, combinedChartConfig);
+
+                // Create individual charts only if they have at least 5 data points
+                for (const key in combinedChartData) {
+                    if (combinedChartData[key].data.length >= 5) {
+                        const individualChartCanvas = document.createElement('canvas');
+                        individualChartCanvas.width = 800;
+                        individualChartCanvas.height = 400;
+                        chartsContainer.appendChild(individualChartCanvas);
+
+                        const individualChartConfig = {
+                            type: 'line',
+                            data: {
+                                labels: labels,
+                                datasets: [
+                                    {
+                                        label: key,
+                                        data: combinedChartData[key].data,
+                                        borderColor: getRandomColor(),
+                                        borderWidth: 2,
+                                        fill: false
+                                    }
+                                ]
+                            },
+                            options: {
+                                scales: {
+                                    x: { display: true, title: { display: true, text: 'Time' } },
+                                    y: { display: true, title: { display: true, text: 'Value' } }
+                                }
+                            }
+                        };
+
+                        new Chart(individualChartCanvas, individualChartConfig);
+                    }
+                }
+
+
+
+                // Add a tile layer
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(map);
+                // Loop through the validData array and add markers to the map
+                validData.forEach(function (item) {
+                    if (item.location) {
+                        var latStr = item.location.Latitude.replace("°", "").trim();
+                        var lngStr = item.location.Longitude.replace("°", "").trim();
+
+                        // Check if the latitude and longitude are not "N/A"
+                        if (latStr !== "N/A" && lngStr !== "N/A") {
+                            var lat = parseFloat(latStr);
+                            var lng = parseFloat(lngStr);
+                            if (!isNaN(lat) && !isNaN(lng)) {
+                                addMarker(lat, lng);
+                            }
+                        }
+                    }
+                });
+
+
+                hideLoadingSkeleton(); // Hide loading skeleton when data processing is complete
+            } catch (error) {
+                console.error('Error processing JSON data:', error);
+                hideLoadingSkeleton(); // Hide loading skeleton in case of an error
+            }
+        }
+
+        // Function to generate a random color
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+
+        // Define a function to add markers to the map
+        function addMarker(lat, lng) {
+            L.marker([lat, lng]).addTo(map);
+            // Set the map's view to the new marker's coordinates
+            map.setView([lat, lng], 15); // Adjust the zoom level
+        }
+    </script>
+</body>
+
+</html>
