@@ -112,6 +112,7 @@
             }
         }
 
+        /* Styles for threejs */
         #visualization {
             width: 100%;
             min-height: 300px;
@@ -120,6 +121,27 @@
         canvas {
             width: 100% !important;
             height: auto !important;
+        }
+
+        /* Styles for the "Back to Top" arrow */
+        #back-to-top {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: none;
+            cursor: pointer;
+            font-size: 18px;
+            background-color: #007BFF;
+            color: #FFF;
+            padding: 10px;
+            border-radius: 50%;
+            border: none;
+            outline: none;
+            transition: background-color 0.3s;
+        }
+
+        #back-to-top:hover {
+            background-color: #0056b3;
         }
     </style>
 </head>
@@ -158,15 +180,35 @@
         <div class="loading-header"></div>
         <div class="loading-content"></div>
     </div>
+    <button id="back-to-top" onclick="scrollToTop()">
+        &uarr;
+    </button>
     <footer>
         <div class="container">
             <p>&copy; 2023 Klaas D'haenekint | Guided by Prof. dr. ir. Paul Devos</p>
         </div>
     </footer>
+    <script> // Function to scroll to the top of the page
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
 
+        // Show the "Back to Top" arrow when scrolling
+        window.onscroll = function () { scrollFunction() };
+
+        function scrollFunction() {
+            const arrow = document.getElementById("back-to-top");
+            if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+                arrow.style.display = "block";
+            } else {
+                arrow.style.display = "none";
+            }
+        }
+    </script>
     <script type="module">
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
         // Function to show the loading skeleton
         function showLoadingSkeleton() {
             const loadingSkeleton = document.getElementById('loading-skeleton');
@@ -491,7 +533,7 @@
                 addLine(tetrahedronCorners[2].clone().multiplyScalar(scale), tetrahedronCorners[3].clone().multiplyScalar(scale));
 
                 // Add OrbitControls
-                const controls = new OrbitControls( camera, renderer.domElement );
+                const controls = new OrbitControls(camera, renderer.domElement);
 
                 // Animation loop
                 function animate() {
