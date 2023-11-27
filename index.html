@@ -160,7 +160,7 @@
         <p>This website allows you to visualize water quality data collected from IoT sensors. You can upload a JSON
             file containing sensor data, and the website will create interactive charts to help you analyze and
             understand the water quality measurements.
-        <br>
+            <br>
             You can also visualize the location of the sensors on a map, and the 3D coordinates of the sound source.
             The 3D visualization can be started by choosing a JSON file with <b>LOCATION</b> data, made by your buoy!
         </p>
@@ -505,11 +505,20 @@
                 });
 
                 // Add a red dot at each corner of the tetrahedron
+                //const scle = 0.5 / Math.sqrt(8 / 3);
+                //const tetrahedronCorners = [
+                //    new THREE.Vector3(scle * Math.sqrt(8 / 9), 0, scle * 1 / 3),
+                //    new THREE.Vector3(scle * -Math.sqrt(2 / 9), scle * Math.sqrt(2 / 3), scle * 1 / 3),
+                //    new THREE.Vector3(scle * -Math.sqrt(2 / 9), scle * -Math.sqrt(2 / 3), scle * 1 / 3),
+                //    new THREE.Vector3(0, 0, -scle)
+                //];
+
+                // precomputed values for the corners of a tetrahedron
                 const tetrahedronCorners = [
-                    new THREE.Vector3(0.5, 0.5, 0.5),
-                    new THREE.Vector3(-0.5, -0.5, 0.5),
-                    new THREE.Vector3(-0.5, 0.5, -0.5),
-                    new THREE.Vector3(0.5, -0.5, -0.5)
+                    new THREE.Vector3(0.28867513459481287, 0, 0.10206207261596574),
+                    new THREE.Vector3(-0.14433756729740643, 0.24999999999999997, 0.10206207261596574),
+                    new THREE.Vector3(-0.14433756729740643, -0.24999999999999997, 0.10206207261596574),
+                    new THREE.Vector3(0, 0, -0.30618621784789724)
                 ];
 
                 tetrahedronCorners.forEach(corner => {
