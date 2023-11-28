@@ -469,6 +469,12 @@
             try {
                 hideLoadingSkeleton(); // Hide loading skeleton while processing data
 
+                const epsilon = 0.2;
+                const minPoints = 3;
+
+                // Perform DBSCAN clustering
+                const clusters = dbscan(coordinates, epsilon, minPoints);
+
                 const scene = new THREE.Scene();
                 const renderer = new THREE.WebGLRenderer();
                 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -495,13 +501,19 @@
                 // Apply scale factor to make objects more visible
                 const scale = 1;
 
-                coordinates.forEach(coord => {
-                    // Scale each sphere
-                    const geometry = new THREE.SphereGeometry(0.1 * scale, 8, 8);
-                    const material = new THREE.MeshBasicMaterial({ color: 0xFFFF00 });
-                    const sphere = new THREE.Mesh(geometry, material);
-                    sphere.position.set(coord.x * scale, coord.y * scale, coord.z * scale);
-                    scene.add(sphere);
+                // Visualize the clusters with different colors
+                clusters.forEach((cluster, clusterIndex) => {
+                    const groupColor = new THREE.Color(Math.random(), Math.random(), Math.random());
+
+                    cluster.forEach(pointIndex => {
+                        const coord = coordinates[pointIndex];
+                        // Create spheres with groupColor for each point in the cluster
+                        const geometry = new THREE.SphereGeometry(0.1 * scale, 8, 8);
+                        const material = new THREE.MeshBasicMaterial({ color: groupColor });
+                        const sphere = new THREE.Mesh(geometry, material);
+                        sphere.position.set(coord.x * scale, coord.y * scale, coord.z * scale);
+                        scene.add(sphere);
+                    });
                 });
 
                 // Add a red dot at each corner of the tetrahedron
@@ -555,6 +567,64 @@
                     renderer.render(scene, camera);
                 }
 
+
+                function dbscan(coordinates, epsilon, minPoints) {
+                    const clusters = [];
+                    const visited = new Set();
+
+                    function expandCluster(pointIndex, clusterIndex) {
+                        const neighbors = findNeighbors(pointIndex);
+
+                        if (neighbors.length < minPoints) {
+                            return;
+                        }
+
+                        clusters[clusterIndex].push(pointIndex);
+                        visited.add(pointIndex);
+
+                        for (const neighbor of neighbors) {
+                            if (!visited.has(neighbor)) {
+                                expandCluster(neighbor, clusterIndex);
+                            }
+                        }
+                    }
+
+                    function findNeighbors(pointIndex) {
+                        const neighbors = [];
+
+                        for (let i = 0; i < coordinates.length; i++) {
+                            if (pointIndex !== i && distance(coordinates[pointIndex], coordinates[i]) < epsilon) {
+                                neighbors.push(i);
+                            }
+                        }
+
+                        return neighbors;
+                    }
+
+                    function distance(point1, point2) {
+                        const dx = point1.x - point2.x;
+                        const dy = point1.y - point2.y;
+                        const dz = point1.z - point2.z;
+                        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+                    }
+
+                    for (let i = 0; i < coordinates.length; i++) {
+                        if (visited.has(i)) {
+                            continue;
+                        }
+
+                        const neighbors = findNeighbors(i);
+
+                        if (neighbors.length < minPoints) {
+                            visited.add(i);
+                        } else {
+                            clusters.push([]);
+                            expandCluster(i, clusters.length - 1);
+                        }
+                    }
+
+                    return clusters;
+                }
                 animate();
             } catch (error) {
                 console.error('Error processing JSON data:', error);
