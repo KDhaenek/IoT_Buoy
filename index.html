@@ -470,7 +470,7 @@
                 hideLoadingSkeleton(); // Hide loading skeleton while processing data
 
                 const epsilon = 0.2;
-                const minPoints = 3;
+                const minPoints = 0;
 
                 // Perform DBSCAN clustering
                 const clusters = dbscan(coordinates, epsilon, minPoints);
