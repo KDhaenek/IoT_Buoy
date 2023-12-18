@@ -380,8 +380,8 @@
                 // Loop through the validData array and add markers to the map
                 validData.forEach(function (item) {
                     if (item.location) {
-                        var latStr = item.location.Latitude.replace("°", "").trim();
-                        var lngStr = item.location.Longitude.replace("°", "").trim();
+                        var latStr = item.location.Latitude;
+                        var lngStr = item.location.Longitude;
 
                         // Check if the latitude and longitude are not "N/A"
                         if (latStr !== "N/A" && lngStr !== "N/A") {
@@ -412,11 +412,44 @@
             return color;
         }
 
+        // Define an object to store marker data
+        const markerData = {
+            currentMarker: null,
+            maxMatches: 0
+        };
+
         // Define a function to add markers to the map
         function addMarker(lat, lng) {
-            L.marker([lat, lng]).addTo(map);
-            // Set the map's view to the new marker's coordinates
-            map.setView([lat, lng], 15); // Adjust the zoom level
+            const key = `${lat}-${lng}`;
+
+            // Check if the marker already exists
+            if (!markerData.currentMarker) {
+                // If no marker exists, create a new one
+                const marker = L.marker([lat, lng]).addTo(map);
+
+                // Update the current marker data
+                markerData.currentMarker = marker;
+                markerData.maxMatches = 1;
+
+                // Set the map's view to the marker's coordinates
+                map.setView([lat, lng], 15); // Adjust the zoom level
+            } else {
+                // If a marker exists, update it only if the current location has more matches
+                if (markerData.maxMatches < 1) {
+                    // Remove the existing marker
+                    map.removeLayer(markerData.currentMarker);
+
+                    // Set the map's view to the new marker's coordinates
+                    map.setView([lat, lng], 15); // Adjust the zoom level
+
+                    // Create a new marker for the location
+                    const marker = L.marker([lat, lng]).addTo(map);
+
+                    // Update the current marker data
+                    markerData.currentMarker = marker;
+                    markerData.maxMatches = 1;
+                }
+            }
         }
 
         // Function to read and process JSON data asynchronously
